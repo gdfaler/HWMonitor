@@ -1,108 +1,108 @@
 # HWMonitor
 
-Монитор железа для Mac на Apple Silicon: температуры, частоты и загрузка ядер, GPU, память, диск, сеть, батарея и мощность — плюс управление нагревом. Без root, без Xcode, без сторонних зависимостей.
+A hardware monitor for Apple Silicon Macs: temperatures, per-core frequencies and load, GPU, memory, disk, network, battery and power draw — plus heat management. No root, no Xcode, no third-party dependencies.
 
-*A hardware monitor for Apple Silicon Macs with heat management: sensors, per-core frequencies, power, processes, and an "auto-cooling" mode that moves heavy background apps to efficiency cores. Russian UI, builds with Command Line Tools only.*
+![Overview](docs/screenshots/overview.png)
 
-![Обзор](docs/screenshots/overview.png)
+> The app's interface is in Russian.
 
-## Возможности
+## Features
 
-- **Температуры** — все живые датчики SMC (на M5 их 115), сгруппированные: Super- и Efficiency-ядра, GPU, батарея, SSD, Wi‑Fi, контроллеры питания и т.д. Минимум и максимум с момента запуска.
-- **Процессор** — загрузка и текущая частота каждого ядра, средняя частота кластеров, история.
-- **GPU, память, диск, сеть** — загрузка и мощность GPU, состав памяти и её давление, своп, свободное место и скорость диска, трафик.
-- **Питание** — мощность всей системы и чипа в ваттах, заряд, здоровье и циклы батареи, адаптер.
-- **Тепловое состояние** — уровень теплового давления macOS: видно, когда система начала снижать частоту.
-- **Процессы** — нагрузка, память, потребляемая мощность и доля времени на быстрых ядрах, с группировкой по приложениям. Приложение можно замедлить, приостановить или завершить.
-- **Автоохлаждение** — при перегреве самые прожорливые фоновые приложения переводятся на экономичные ядра (см. ниже).
-- **Режим энергосбережения** для батареи и адаптера, запрет сна, три готовых профиля.
-- **Строка меню** — температура и нагрузка, сводка по клику. Окно можно закрыть, монитор продолжит работать.
+- **Temperatures** — every live SMC sensor (115 on an M5), grouped into Super and Efficiency cores, GPU, battery, SSD, Wi‑Fi, power controllers and more, with min/max since launch.
+- **CPU** — load and current frequency of every core, average cluster frequency, history.
+- **GPU, memory, disk, network** — GPU load and power, memory breakdown and pressure, swap, free space, disk throughput and traffic.
+- **Power** — system and chip power in watts; battery charge, health and cycle count; charger.
+- **Thermal state** — the macOS thermal pressure level, so you can see when the system starts throttling.
+- **Processes** — CPU, memory, power draw and share of time on performance cores, grouped by app. Your own apps can be slowed down, paused or quit.
+- **Auto-cooling** — when the chip overheats, the heaviest background apps are moved to efficiency cores (see below).
+- **Low Power Mode** for battery and charger, keep-awake, three presets.
+- **Menu bar** — temperature and load, with a summary on click. Close the window and the monitor keeps running.
 
 | | |
 |---|---|
-| ![Процессор](docs/screenshots/cpu.png) | ![Датчики](docs/screenshots/sensors.png) |
+| ![CPU](docs/screenshots/cpu.png) | ![Sensors](docs/screenshots/sensors.png) |
 
-## Как устроено «охлаждение»
+## How "cooling" works on a fanless Mac
 
-На MacBook Air вентилятора нет, поэтому настраивать обороты нечем: чип остывает через корпус, а при перегреве macOS сама снижает частоту. Управлять можно только тем, сколько тепла выделяется.
+A MacBook Air has no fan, so there is no fan speed to tune: the chip cools through the chassis, and macOS lowers its clock when it gets too hot. The only thing you can control is how much heat is produced.
 
-Главный рычаг — фоновый приоритет (`setpriority(PRIO_DARWIN_PROCESS, pid, PRIO_DARWIN_BG)`): процесс продолжает работать, но планировщик держит его только на экономичных ядрах. Для своих процессов root не нужен.
+The main lever is background priority (`setpriority(PRIO_DARWIN_PROCESS, pid, PRIO_DARWIN_BG)`): the process keeps running, but the scheduler keeps it on efficiency cores only. No root is needed for your own processes.
 
-Проверка на MacBook Air M5: тестовая нагрузка в 4 потока за несколько секунд разогрела чип до 92–101°. После перевода на экономичные ядра чип держался на 48–51°, хотя нагрузка продолжала работать (300–380% CPU).
+Measured on a MacBook Air M5: a 4-thread test load heated the chip to 92–101 °C within seconds. Once it was moved to efficiency cores, the chip stayed at 48–51 °C while the load kept running (300–380% CPU).
 
-Автоохлаждение замедляет до трёх самых тяжёлых фоновых приложений, когда чип горячее порога два замера подряд — или сразу, если он горячее порога на 10° и больше. Приоритет возвращается, когда приложение закончило тяжёлую работу и чип остыл, либо когда вы на него переключились. Активное приложение и системные процессы не трогаются.
+Auto-cooling slows down up to three of the heaviest background apps when the chip stays above the threshold for two samples in a row, or immediately if it is 10 °C or more above it. Priority is restored when the app has finished its heavy work and the chip has cooled down, or when you switch to that app. The frontmost app and system processes are never touched.
 
-При выходе (в том числе по `SIGTERM`) монитор возвращает обычный приоритет всем замедленным процессам и снимает паузу с приостановленных; если он упал, это делается при следующем запуске.
+On exit (including `SIGTERM`) the monitor restores normal priority to every slowed-down process and resumes paused ones; after a crash, this happens on the next launch.
 
-![Управление](docs/screenshots/controls.png)
+![Controls](docs/screenshots/controls.png)
 
-## Требования
+## Requirements
 
-- Mac на Apple Silicon. Собирается под macOS 14 и новее; проверено только на MacBook Air M5 с macOS 27.
-- Command Line Tools: `xcode-select --install`. Xcode не нужен.
+- An Apple Silicon Mac. Builds for macOS 14 and later; tested only on a MacBook Air M5 with macOS 27.
+- Command Line Tools: `xcode-select --install`. Xcode is not required.
 
-## Сборка и установка
+## Build and install
 
-В папке репозитория:
+From the repository folder:
 
 ```bash
 ./build.sh
 open HWMonitor.app
 ```
 
-`build.sh` компилирует `Sources/*.swift` через `swiftc`, собирает `HWMonitor.app`, рисует иконку (если рядом нет своей `icon.png`) и подписывает приложение локально. Для автозапуска перенесите `HWMonitor.app` в «Программы» и включите его в разделе «Управление».
+`build.sh` compiles `Sources/*.swift` with `swiftc`, assembles `HWMonitor.app`, draws an icon (unless you put your own `icon.png` next to it) and signs the app locally. To launch it at login, move `HWMonitor.app` to Applications and turn the option on in the Controls section («Управление»).
 
-Собранный `.app`, переданный на другой Mac, macOS при первом запуске заблокирует, потому что он не нотаризован: разрешить можно в System Settings → Privacy & Security → Open Anyway.
+Downloaded builds (for example from Releases) are not notarized, so macOS blocks the first launch: allow it in System Settings → Privacy & Security → Open Anyway.
 
-## Откуда берутся данные
+## Where the data comes from
 
-Всё читается без прав администратора.
+Everything is read without administrator privileges.
 
-| Данные | Источник |
+| Data | Source |
 |---|---|
-| Температуры, мощность шин питания, вентиляторы | SMC (пользовательский клиент `AppleSMC`) |
-| Частоты ядер, мощность GPU | IOReport (закрытая `libIOReport`) и таблицы DVFS из `pmgr` |
-| Загрузка ядер | `host_processor_info` |
-| Память | `host_statistics64`, `vm.swapusage` |
-| GPU | `PerformanceStatistics` у `IOAccelerator` |
-| Диск и сеть | `IOBlockStorageDriver`, `getifaddrs` |
-| Батарея | `AppleSmartBattery` в IORegistry |
-| Тепловое давление | уведомление `com.apple.system.thermalpressurelevel` |
-| Процессы | `libproc` для своих, `ps` для системных |
+| Temperatures, power rails, fans | SMC (`AppleSMC` user client) |
+| Core frequencies, GPU power | IOReport (private `libIOReport`) and DVFS tables from `pmgr` |
+| Core load | `host_processor_info` |
+| Memory | `host_statistics64`, `vm.swapusage` |
+| GPU | `PerformanceStatistics` of `IOAccelerator` |
+| Disk and network | `IOBlockStorageDriver`, `getifaddrs` |
+| Battery | `AppleSmartBattery` in the IORegistry |
+| Thermal pressure | the `com.apple.system.thermalpressurelevel` notification |
+| Processes | `libproc` for your own, `ps` for system ones |
 
-Режим энергосбережения переключается через `pmset`; для этого macOS показывает стандартный запрос пароля администратора.
+Low Power Mode is switched via `pmset`; macOS shows its standard administrator password prompt for that.
 
-## Ограничения
+## Limitations
 
-- Используются недокументированные интерфейсы (SMC, IOReport, `responsibility_get_pid_responsible_for_pid`). Это не годится для App Store и может сломаться в будущих версиях macOS.
-- Назначение ключей SMC Apple не публикует. Группы датчиков размечены на M5 нагрузочным тестом; на M1–M4 ключи называются иначе, и часть датчиков может попасть в «Прочие». «Чип (оценка)» — тоже вывод из теста.
-- Вентиляторы на Mac, где они есть, только отображаются — управления оборотами нет. На настоящих вентиляторах отображение не проверялось.
-- Системными процессами без root управлять нельзя, они только показываются.
-- Интерфейс только на русском.
+- Uses undocumented interfaces (SMC, IOReport, `responsibility_get_pid_responsible_for_pid`). Not suitable for the App Store and may break in future macOS versions.
+- Apple does not document what SMC keys mean. Sensor groups were mapped on an M5 with a load test; on M1–M4 the keys are named differently, and some sensors may end up under «Прочие датчики» (Other). The chip power estimate is inferred from the same test.
+- On Macs that have fans, fan speeds are only displayed — there is no fan control. The fan display has not been tested on real fans.
+- System processes can't be controlled without root; they are only shown.
+- The interface is Russian only.
 
-## Разработка
+## Development
 
-| Файл | Что внутри |
+| File | Contents |
 |---|---|
-| `SMC.swift`, `Sensors.swift` | чтение SMC, поиск и группировка датчиков |
-| `IOReport.swift`, `Bridge.h` | частоты ядер и мощность GPU через IOReport |
-| `Probes.swift` | процессор, память, GPU, диск, сеть, батарея, тепловое состояние |
-| `Processes.swift` | список процессов и их нагрузка |
-| `Controls.swift` | приоритеты процессов, энергосбережение, запрет сна, уведомления, автозапуск |
-| `Model.swift` | сбор данных в фоне, история, автоохлаждение, настройки |
-| `App.swift`, `Views*.swift`, `Charts.swift`, `Theme.swift` | интерфейс |
+| `SMC.swift`, `Sensors.swift` | SMC access, sensor discovery and grouping |
+| `IOReport.swift`, `Bridge.h` | core frequencies and GPU power via IOReport |
+| `Probes.swift` | CPU, memory, GPU, disk, network, battery, thermal state |
+| `Processes.swift` | process list and per-process load |
+| `Controls.swift` | process priority, Low Power Mode, keep-awake, notifications, launch at login |
+| `Model.swift` | background sampling, history, auto-cooling, settings |
+| `App.swift`, `Views*.swift`, `Charts.swift`, `Theme.swift` | user interface |
 
-- В SDK macOS 27 `@State` стал макросом, плагин которого есть только в Xcode, поэтому вместо него используется обёртка `@Local` из `Theme.swift`.
-- Монитор экономит ресурсы: полный набор датчиков читается только на странице «Датчики», процессы — когда их кто-то видит или включено автоохлаждение, графики не пересчитываются, пока окно скрыто.
-- `HWMonitor --background` запускает приложение без окна (так же оно ведёт себя при автозапуске).
-- Снимки окна для проверки вёрстки: приложение сохраняет PNG каждого раздела и выходит.
+- In the macOS 27 SDK, `@State` became a macro whose plugin ships only with Xcode, so the code uses the `@Local` wrapper from `Theme.swift` instead.
+- The monitor is frugal: the full sensor set is read only on the Sensors page, processes only while someone looks at them or auto-cooling is on, and charts are not recomputed while the window is hidden.
+- `HWMonitor --background` starts the app without its window (the same happens at login).
+- Layout snapshots: the app saves a PNG of each section and quits.
 
 ```bash
 HWMON_SNAPSHOT_DIR=/tmp/shots HWMON_SNAPSHOT_PAGES=overview,cpu HWMON_SNAPSHOT_DELAY=30 ./HWMonitor.app/Contents/MacOS/HWMonitor
 ```
 
-`HWMON_APPEARANCE=dark` — снимки в тёмной теме.
+`HWMON_APPEARANCE=dark` takes the snapshots in dark mode.
 
-## Лицензия
+## License
 
 [MIT](LICENSE)
