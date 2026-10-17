@@ -1,0 +1,7 @@
+# Результат сборки
+HWMonitor.app/
+# Иконку build.sh рисует сам, если рядом нет своей
+icon.png
+.DS_Store
+# Архивы для раздела Releases
+*.zip
