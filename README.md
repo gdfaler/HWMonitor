@@ -4,7 +4,7 @@ A hardware monitor for Apple Silicon Macs: temperatures, per-core frequencies an
 
 ![Overview](docs/screenshots/overview.png)
 
-> The app's interface is in Russian.
+> The app's interface is in Russian and English (can be switched in settings).
 
 ## Features
 
